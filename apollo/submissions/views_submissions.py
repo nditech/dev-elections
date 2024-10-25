@@ -30,7 +30,7 @@ from flask_security import current_user, login_required
 from flask_security.utils import verify_and_update_password
 from geoalchemy2.shape import to_shape
 from slugify import slugify
-from sqlalchemy import BigInteger, case, desc, func, nullslast, text
+from sqlalchemy import BigInteger, case, desc, func, nullslast
 from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import false
@@ -294,7 +294,6 @@ def submission_list(form_id):
                 models.Submission,
                 models.Location,
                 models.Participant,
-                func.jsonb_each_text(descendants.c.name_translations).alias("translation"),
             )
             .filter(
                 models.Submission.submission_type == "O",
@@ -304,7 +303,6 @@ def submission_list(form_id):
             .join(models.Location, models.Submission.location_id == models.Location.id)
             .join(models.Participant, models.Submission.participant_id == models.Participant.id)
             .outerjoin(descendants, descendants.c.descendant_id == models.Submission.location_id)
-            .group_by(text("translation.value"), models.Submission.id)
         )
     elif request.args.get("sort_by") == "phone":
         queryset = (
@@ -357,9 +355,15 @@ def submission_list(form_id):
             queryset = queryset.order_by(models.Submission.id.cast(BigInteger))
     elif request.args.get("sort_by") == "location":
         if request.args.get("sort_direction") == "desc":
-            queryset = queryset.order_by(desc(text("translation.value")))
+            queryset = queryset.order_by(
+                desc(descendants.c.name_translations.op("->>")(user_locale)),
+                desc(descendants.c.name_translations.op("->>")(deployment_locale)),
+            )
         else:
-            queryset = queryset.order_by(text("translation.value"))
+            queryset = queryset.order_by(
+                descendants.c.name_translations.op("->>")(user_locale),
+                descendants.c.name_translations.op("->>")(deployment_locale),
+            )
     elif request.args.get("sort_by") == "participant":
         # specify the conditions for the order term
         condition1 = full_name_term == None  # noqa
@@ -371,7 +375,7 @@ def submission_list(form_id):
             first_name_term,
             other_names_term,
             last_name_term,
-        ).alias("full_name_concat")
+        )
 
         # if the full name is empty, order by the concatenated
         # name, else order by the full name
@@ -1392,7 +1396,6 @@ def quality_assurance_list(form_id):
                 models.Submission,
                 models.Location,
                 models.Participant,
-                func.jsonb_each_text(descendants.c.name_translations).alias("translation"),
             )
             .filter(
                 models.Submission.submission_type == "O",
@@ -1402,14 +1405,11 @@ def quality_assurance_list(form_id):
             .join(models.Location, models.Submission.location_id == models.Location.id)
             .join(models.Participant, models.Submission.participant_id == models.Participant.id)
             .outerjoin(descendants, descendants.c.descendant_id == models.Submission.location_id)
-            .group_by(text("translation.value"), models.Submission.id)
         )
     elif request.args.get("sort_by") == "phone":
         participant_phones = (
             models.PhoneContact.query.filter(models.PhoneContact.verified == True)  # noqa
-            .order_by(  # noqa
-                desc(models.PhoneContact.updated)
-            )
+            .order_by(desc(models.PhoneContact.updated))
             .subquery()
         )
         queryset = (
@@ -1458,9 +1458,15 @@ def quality_assurance_list(form_id):
             queryset = queryset.order_by(models.Submission.serial_no.cast(BigInteger))
     elif request.args.get("sort_by") == "location":
         if request.args.get("sort_direction") == "desc":
-            queryset = queryset.order_by(desc(text("translation.value")))
+            queryset = queryset.order_by(
+                desc(descendants.c.name_translations.op("->>")(user_locale)),
+                desc(descendants.c.name_translations.op("->>")(deployment_locale)),
+            )
         else:
-            queryset = queryset.order_by(text("translation.value"))
+            queryset = queryset.order_by(
+                descendants.c.name_translations.op("->>")(user_locale),
+                descendants.c.name_translations.op("->>")(deployment_locale),
+            )
     elif request.args.get("sort_by") == "participant":
         # specify the conditions for the order term
         condition1 = full_name_term == None  # noqa
@@ -1472,7 +1478,7 @@ def quality_assurance_list(form_id):
             first_name_term,
             other_names_term,
             last_name_term,
-        ).alias("full_name_concat")
+        )
 
         # if the full name is empty, order by the concatenated
         # name, else order by the full name
@@ -1483,9 +1489,9 @@ def quality_assurance_list(form_id):
             queryset = queryset.order_by(order_term)
     elif request.args.get("sort_by") == "phone":
         if request.args.get("sort_direction") == "desc":
-            queryset = queryset.order_by(desc(models.PhoneContact.number))
+            queryset = queryset.order_by(desc(participant_phones.c.number))
         else:
-            queryset = queryset.order_by(models.PhoneContact.number)
+            queryset = queryset.order_by(participant_phones.c.number)
     elif request.args.get("sort_by") == "moment":
         if request.args.get("sort_direction") == "desc":
             queryset = queryset.order_by(nullslast(desc(models.Submission.participant_updated)))
