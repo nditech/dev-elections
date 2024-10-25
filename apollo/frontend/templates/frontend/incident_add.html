@@ -108,7 +108,7 @@
       var fileInput = changeEventObj.target;
       var container = fileInput.parentElement;
       var selectButton = container.children[1];
-      
+
       if (fileInput.files.length) {
         selectButton.classList.remove('btn-secondary');
         selectButton.classList.add('btn-primary');
@@ -140,6 +140,12 @@
 
     $('.select2-locations').select2(addIncidentLocationOptions);
     $('.select2-participants').select2(addIncidentParticipantOptions);
+    $('.select2-participants').on('select2:select', function (e) {
+      if (e.params.data["location.id"] !== undefined) {
+        var opt = new Option(e.params.data["location.name"] + " · " + e.params.data["location.location_type.name"], e.params.data["location.id"], true, true);
+        $('.select2-locations').append(opt).trigger('change');
+      }
+    });
 
     $(document).on('change', '.tracked', function(e){
       window.onbeforeunload = function () { return true; };
