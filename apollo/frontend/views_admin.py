@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import re
 from datetime import datetime
 from io import BytesIO
 from urllib.parse import urlencode
@@ -209,12 +210,15 @@ class HiddenObjectMixin(object):
     def filter_hidden(self, query):
         model_class = self.model
         query_params = request.args.to_dict(flat=False)
-        show_hidden = bool(query_params.get(self.query_param_name))
-        if show_hidden:
+        show_hidden_direct = bool(query_params.get(self.query_param_name))
+        show_hidden_param = any(
+            re.search(rf'{self.query_param_name}=[^&]+', item)
+            for item in query_params.get("url", [])
+        )
+        if show_hidden_direct or show_hidden_param:
             pass
         else:
             query = query.filter(model_class.is_hidden == False)  # noqa
-
         return query
 
     def render(self, template, **kwargs):
