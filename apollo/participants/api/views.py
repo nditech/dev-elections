@@ -235,10 +235,14 @@ def _get_form_data(participant: Participant):
     )
 
     # get participant submissions
-    participant_submissions = Submission.query.join(
-        EventAlias,
-        and_(EventAlias.participant_set_id == participant.participant_set_id, Submission.event_id == EventAlias.id),
-    ).join(FormAlias, Submission.form_id == FormAlias.id)
+    participant_submissions = (
+        Submission.query.filter(Submission.participant_id == participant.id)
+        .join(
+            EventAlias,
+            and_(EventAlias.participant_set_id == participant.participant_set_id, Submission.event_id == EventAlias.id),
+        )
+        .join(FormAlias, Submission.form_id == FormAlias.id)
+    )
 
     # get checklist and survey forms based on the available submissions
     non_incident_forms = participant_submissions.with_entities(FormAlias).distinct(FormAlias.id)

@@ -6,12 +6,13 @@ from apollo.participants.models import Participant
 
 
 class ParticipantSchema(BaseModelSchema):
-    role = ma.fields.Method('get_role')
+    role = ma.fields.Method("get_role")
 
     class Meta:
+        """ParticipantSchema Meta."""
+
         model = Participant
-        fields = ('id', 'full_name', 'first_name', 'other_names', 'last_name',
-                  'participant_id', 'role')
+        fields = ("id", "name", "full_name", "first_name", "other_names", "last_name", "participant_id", "role")
 
     def get_role(self, obj):
         return obj.role.name
