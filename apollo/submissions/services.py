@@ -47,7 +47,8 @@ class SubmissionService(Service):
 
     def export_list(self, query, include_qa=False, include_group_timestamps=False):
         if query.count() == 0:
-            raise StopIteration
+            yield None
+            return
 
         submission = query.first()
         event = submission.event
