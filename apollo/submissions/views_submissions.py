@@ -519,6 +519,8 @@ def submission_create(form_id):
             form=questionnaire_form,
             submission_type="O",
             created=autils.current_timestamp(),
+            updated=autils.current_timestamp(),
+            participant_updated=autils.current_timestamp(),
             participant=submission_form.participant.data,
             location=submission_form.location.data or submission_form.participant.data.location,  # noqa
             incident_description=submission_form.description.data,
