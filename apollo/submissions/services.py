@@ -47,7 +47,7 @@ class SubmissionService(Service):
 
     def export_list(self, query, include_qa=False, include_group_timestamps=False):
         if query.count() == 0:
-            yield None
+            yield ""
             return
 
         submission = query.first()

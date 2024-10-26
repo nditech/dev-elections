@@ -27,7 +27,7 @@ class LocationService(Service):
     def export_list(self, query):
         headers = []
         if query.count() == 0:
-            yield None
+            yield ""
             return
 
         location_set = query.first().location_set

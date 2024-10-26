@@ -1305,7 +1305,7 @@ def quality_assurance_list(form_id):
     breadcrumbs = [_("Quality Assurance"), form.name]
     filter_class = filters.generate_quality_assurance_filter(event, form)
 
-    data = request.args.to_dict()
+    data = request.args.to_dict(flat=False)
     data["form_id"] = str(form.id)
     page = int(data.pop("page", [1])[0])
     loc_types = displayable_location_types(is_administrative=True, location_set_id=g.event.location_set_id)

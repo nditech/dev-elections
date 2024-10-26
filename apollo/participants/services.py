@@ -21,7 +21,7 @@ class ParticipantService(Service):
 
     def export_list(self, query):
         if query.count() == 0:
-            yield None
+            yield ""
             return
 
         participant = query.first()
