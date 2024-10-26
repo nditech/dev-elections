@@ -47,8 +47,10 @@ def _variance(dataframe, numerator, denominator):
     sigma_msquared = msquared.sum(axis=0)
     sigma_am = am.sum(axis=0)
 
-    return ((1 - f) / (k * mbarsquared)) * (
-        (sigma_asquared - (2 * p * sigma_am) + (psquared * sigma_msquared)) / (k - 1)
+    return (
+        ((1 - f) / (k * mbarsquared)) * ((sigma_asquared - (2 * p * sigma_am) + (psquared * sigma_msquared)) / (k - 1))
+        if k != 1
+        else np.nan
     )
 
 
@@ -106,18 +108,6 @@ def voting_results(form_id, location_id=None):
         not_(models.Submission.quarantine_status.in_(["A", "R"])),
     )
     filter_set = filter_class(queryset, request.args)
-    dataset = make_submission_dataframe(filter_set.qs, form)
-
-    for result_field in result_fields:
-        null_value_orig = result_field.get("null_value")
-        if null_value_orig is None:
-            continue
-        try:
-            null_value = int(null_value_orig)
-        except (TypeError, ValueError):
-            continue
-
-        dataset[result_field["tag"]] = dataset[result_field["tag"]].replace(null_value, np.nan)
 
     registered_voters_field = form.registered_voters_tag or "registered_voters"
     if form.invalid_votes_tag:
@@ -136,6 +126,21 @@ def voting_results(form_id, location_id=None):
     non_null_fields = rejected_votes_field + blank_votes_field + accredited_voters_field + result_field_labels
     non_zero_fields = [registered_voters_field]
     non_zero_sum_fields = result_field_labels
+
+    excluded_fields = set(form.tags).difference(non_null_fields + non_zero_fields)
+
+    dataset = make_submission_dataframe(filter_set.qs, form, excluded_tags=excluded_fields)
+
+    for result_field in result_fields:
+        null_value_orig = result_field.get("null_value")
+        if null_value_orig is None:
+            continue
+        try:
+            null_value = int(null_value_orig)
+        except (TypeError, ValueError):
+            continue
+
+        dataset[result_field["tag"]] = dataset[result_field["tag"]].replace(null_value, np.nan)
 
     if not dataset.empty:
         # compute and store reporting status

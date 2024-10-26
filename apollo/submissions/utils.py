@@ -78,7 +78,7 @@ def make_submission_dataframe(query, form, selected_tags=None, excluded_tags=Non
     # standard deviation on those columns
     type_coercions = {
         tag: np.float64
-        for tag in form.tags
+        for tag in fields
         if form.get_field_by_tag(tag)["type"] == "integer" or form.get_field_by_tag(tag)["type"] == "select"
     }
 
