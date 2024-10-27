@@ -74,7 +74,7 @@ class LocationService(Service):
 
         output = StringIO()
         output.write(constants.BOM_UTF8_STR)
-        writer = csv.writer(output)
+        writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
         writer.writerow(headers)
         yield output.getvalue()
         output.close()
@@ -121,7 +121,7 @@ class LocationService(Service):
                 record.append(row[index])
 
             output = StringIO()
-            writer = csv.writer(output)
+            writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
             writer.writerow(record)
             yield output.getvalue()
             output.close()

@@ -53,7 +53,7 @@ class ParticipantService(Service):
         # TODO: extra fields missing
         output_buffer = StringIO()
         output_buffer.write(constants.BOM_UTF8_STR)
-        writer = csv.writer(output_buffer)
+        writer = csv.writer(output_buffer, quoting=csv.QUOTE_NONNUMERIC)
 
         writer.writerow(headers)
         yield output_buffer.getvalue()
@@ -97,7 +97,7 @@ class ParticipantService(Service):
 
             # TODO: process extra fields here
             output_buffer = StringIO()
-            writer = csv.writer(output_buffer)
+            writer = csv.writer(output_buffer, quoting=csv.QUOTE_NONNUMERIC)
             writer.writerow(record)
             yield output_buffer.getvalue()
             output_buffer.close()

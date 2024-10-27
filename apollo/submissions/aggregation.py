@@ -124,7 +124,7 @@ def aggregate_dataset(query, form, stream=False):
     if stream:
         output_stream = StringIO()
         output_stream.write(codecs.BOM_UTF8.decode("utf-8"))
-        writer = csv.writer(output_stream)
+        writer = csv.writer(output_stream, quoting=csv.QUOTE_NONNUMERIC)
         writer.writerow(headers)
 
         yield output_stream.getvalue()
@@ -179,7 +179,7 @@ def aggregate_dataset(query, form, stream=False):
 
             if stream:
                 output_stream = StringIO()
-                writer = csv.writer(output_stream)
+                writer = csv.writer(output_stream, quoting=csv.QUOTE_NONNUMERIC)
                 writer.writerow(current_row)
 
                 yield output_stream.getvalue()

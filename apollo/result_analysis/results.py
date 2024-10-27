@@ -61,6 +61,7 @@ def _margin_of_error(dataframe, numerator, denominator, cv=1.96):
     return moe
 
 
+# TODO: use proper field terminology for the variable names in this function (field, field_label, etc.)
 def voting_results(form_id, location_id=None):
     """Compute voting results."""
     event = g.event
@@ -131,6 +132,7 @@ def voting_results(form_id, location_id=None):
 
     dataset = make_submission_dataframe(filter_set.qs, form, excluded_tags=excluded_fields)
 
+    # Check to replace records that have the configured null value with nan
     for result_field in result_fields:
         null_value_orig = result_field.get("null_value")
         if null_value_orig is None:
@@ -141,6 +143,17 @@ def voting_results(form_id, location_id=None):
             continue
 
         dataset[result_field["tag"]] = dataset[result_field["tag"]].replace(null_value, np.nan)
+
+    # Check to replace records that have the configured null value for registered voters
+    # (if the column is derived from a reported field) with nan
+    if form.registered_voters_tag:
+        try:
+            _null_value = form.get_field_by_tag(form.registered_voters_tag).get("null_value")
+            if null_value is not None:
+                null_value = int(_null_value)
+                dataset[registered_voters_field] = dataset[registered_voters_field].replace(null_value, np.nan)
+        except (TypeError, ValueError):
+            pass
 
     if not dataset.empty:
         # compute and store reporting status
