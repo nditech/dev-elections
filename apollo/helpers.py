@@ -79,11 +79,11 @@ def load_source_file(source_file):
                 sheetnames = workbook.sheetnames
                 ncols = workbook[sheetnames[0]].max_column
             else:
-                raise Exception("Unsupported Excel workbook")
+                # engine is currently one of: xlrd, openpyxl, odf, pyxlsb, calamine
+                raise Exception(f"Unsupported Excel workbook. Used engine: {xl.engine}")
             df = xl.parse(0, converters={i: str for i in range(ncols)}).fillna("")
         except Exception:
-            # engine is currently one of: xlrd, openpyxl, odf, pyxlsb, calamine
-            logger.info(f"could not parse the Excel file. Used engine: {xl.engine}")
+            logger.info("Could not parse the Excel file.")
             df = pd.DataFrame()
     else:
         logger.info("could not determine the mimetype or an unacceptable file was uploaded.")
