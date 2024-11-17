@@ -149,7 +149,7 @@ def voting_results(form_id, location_id=None):
     if form.registered_voters_tag:
         try:
             _null_value = form.get_field_by_tag(form.registered_voters_tag).get("null_value")
-            if null_value is not None:
+            if _null_value is not None:
                 null_value = int(_null_value)
                 dataset[registered_voters_field] = dataset[registered_voters_field].replace(null_value, np.nan)
         except (TypeError, ValueError):
