@@ -134,6 +134,10 @@ class SubmissionService(Service):
                     extra_data_columns = [""] * len(extra_fields)
 
                 record = [submission.serial_no] if form.form_type == "SURVEY" else []  # noqa
+                most_recent_comment = SubmissionComment.query.filter_by(
+                    submission=submission
+                ).order_by(SubmissionComment.id.desc()).first()
+                last_comment = (most_recent_comment.comment or "") if most_recent_comment else ""
 
                 record.extend(
                     [
@@ -169,9 +173,7 @@ class SubmissionService(Service):
                         [submission.updated.strftime("%Y-%m-%d %H:%M:%S") if submission.updated else ""]
                         + [1 if sample in submission.participant.samples else 0 for sample in samples]
                         + [
-                            submission.comments[0].comment.replace("\n", "")  # noqa
-                            if submission.comments
-                            else "",
+                            last_comment.replace("\n", ""),
                             submission.quarantine_status.value if submission.quarantine_status else "",
                         ]
                     )
