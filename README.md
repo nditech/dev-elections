@@ -62,7 +62,7 @@ The main application container and worker containers will be built and run toget
 
 To deploy the code from scratch without drawing upon the cached images (for example to incorporate subsequent any changes made to the Apollo code outside of the docker containers), run `docker-compose build --no-cache`.
 
-
+To build and install on a Mac, see the additional instructions in the section titled _Installing on Macs_.
 
 ### Nginx configuration
 
@@ -278,3 +278,42 @@ Finally, you can then run the main application container:
 `docker run -d -n web --link postgres --link redis -e DATABASE_NAME=${DATABASE_NAME:-apollo} -v upload_data:/app/uploads -v ./settings.ini:/app/settings.ini apollo:latest ./manage.py gunicorn -c gunicorn.conf`
 
 In both instances, the database (PostgreSQL) and task queue (Redis) containers are linked to the worker and main application containers.
+
+
+### Installing on Macs
+
+#### Running on Apple Silicon
+
+The `postgis` docker image used in this setup does not have a build for Apple Silicon, so you can receive errors such as these:
+
+```
+ ! postgres The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
+```
+
+A workaround is to create your own image locally. First, create a folder in the project named `postgres`, then a `Dockerfile` inside with the following content:
+
+```
+# Use the official PostgreSQL image that supports ARM64
+FROM postgres:12
+
+# Install PostGIS
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        postgis postgresql-12-postgis-3 \
+        postgresql-12-postgis-3-scripts && \
+    rm -rf /var/lib/apt/lists/*
+```
+
+Finally, in the `docker-compose.yml` file, replace the line `image: postgis/postgis:12-3.0` with `build: ./postgres`.
+
+#### Port 5000 in Use
+
+On certain MacOS versions you might receive the following error:
+
+```
+Error response from daemon: Ports are not available: exposing port TCP 0.0.0.0:5000 -> 0.0.0.0:0: listen tcp 0.0.0.0:5000: bind: address already in use
+```
+
+This can be caused by the Control Center listening on this port to support AirPlay, as described [here](https://stackoverflow.com/questions/72369320/why-always-something-is-running-at-port-5000-on-my-mac).
+
+As a workaround, you can either follow the instructions [here](https://stackoverflow.com/questions/72369320/why-always-something-is-running-at-port-5000-on-my-mac) to disable the AirPlay Receiver, or you can update the port used by opening the `docker-compose.yml` file and changing the line `- "5000:5000"` to `- "5002:5000"`.
