@@ -6,6 +6,8 @@ import magic
 import pandas as pd
 from flask import Blueprint
 from loguru import logger
+from openpyxl import Workbook
+from xlrd import Book
 
 CSV_MIMETYPES = [
     "text/csv",
@@ -68,10 +70,20 @@ def load_source_file(source_file):
         # likely an Excel spreadsheet, read all data as strings
         try:
             xl = pd.ExcelFile(source_file)
-            ncols = xl.book.sheet_by_index(0).ncols
+            workbook = xl.book
+            if isinstance(workbook, Book):
+                # using xlrd to read the file
+                ncols = workbook.sheet_by_index(0).ncols
+            elif isinstance(workbook, Workbook):
+                # using openpyxl to read the file
+                sheetnames = workbook.sheetnames
+                ncols = workbook[sheetnames[0]].max_column
+            else:
+                # engine is currently one of: xlrd, openpyxl, odf, pyxlsb, calamine
+                raise Exception(f"Unsupported Excel workbook. Used engine: {xl.engine}")
             df = xl.parse(0, converters={i: str for i in range(ncols)}).fillna("")
         except Exception:
-            logger.info("could not parse the Excel file.")
+            logger.info("Could not parse the Excel file.")
             df = pd.DataFrame()
     else:
         logger.info("could not determine the mimetype or an unacceptable file was uploaded.")
