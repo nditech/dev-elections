@@ -115,8 +115,8 @@
                             <option v-for="[key, value] in getSortedOptions(term.field.options)" :value="value" :key="value">[[ value ]]</option>
                         </select>
                         <div class="input-group-append">
-                            <button class="btn btn-success" @click.prevent="addNewTerm" aria-label="{{ _('Add Search Term') }}" v-if="index === (terms.length - 1)"><i class="fa fa-plus-circle"></i></button>
-                            <button class="btn btn-danger" @click.prevent="removeItem(index)" aria-label="{{ _('Delete Search Term') }}" v-if="terms.length > 1"><i class="fa fa-minus-circle"></i></button>
+                            <span class="btn btn-success" @click.prevent="addNewTerm" aria-label="{{ _('Add Search Term') }}" v-if="index === (terms.length - 1)"><i class="fa fa-plus-circle"></i></span>
+                            <span class="btn btn-danger" @click.prevent="removeItem(index)" aria-label="{{ _('Delete Search Term') }}" v-if="terms.length > 1"><i class="fa fa-minus-circle"></i></span>
                         </div>
                     </div>
                     <input type="hidden" name="{{ filter_form.values.name }}" id="{{ filter_form.values.id }}" :value="serializedExpressions">
