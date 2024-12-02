@@ -173,7 +173,7 @@ class SubmissionService(Service):
                         [submission.updated.strftime("%Y-%m-%d %H:%M:%S") if submission.updated else ""]
                         + [1 if sample in submission.participant.samples else 0 for sample in samples]
                         + [
-                            last_comment.replace("\n", ""),
+                            last_comment.replace("\n", " ").strip(),
                             submission.quarantine_status.value if submission.quarantine_status else "",
                         ]
                     )
