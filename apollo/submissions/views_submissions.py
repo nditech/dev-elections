@@ -203,6 +203,7 @@ def submission_list(form_id):
         location = services.locations.find(
             location_set_id=event.location_set_id, id=request.args.get("location")
         ).first()
+        query = query.join(models.Submission.location)
 
     if request.args.get("export") and permissions.export_submissions.can():
         query = filter_class(query, request.args).qs
