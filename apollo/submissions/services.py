@@ -8,7 +8,6 @@ from flask_babel import gettext as _
 from geoalchemy2.shape import to_shape
 
 from apollo import constants
-from apollo.core import db
 from apollo.dal.service import Service
 from apollo.locations.models import LocationType, LocationTypePath
 from apollo.participants.models import Sample
@@ -119,31 +118,21 @@ class SubmissionService(Service):
         yield output.getvalue()
         output.close()
 
-        submission_ids = [i[0] for i in query.with_entities(Submission.id).all()]
-        latest_comments = (
-            db.session.query(
-                SubmissionComment.submission_id, sa.func.max(SubmissionComment.submit_date).label("max_date")
-            )
-            .group_by(SubmissionComment.submission_id)
-            .subquery()
-        )
+        latest_comments_subquery = sa.select(
+            SubmissionComment,
+            sa.func.row_number()
+            .over(partition_by=SubmissionComment.submission_id, order_by=SubmissionComment.submit_date.desc())
+            .label("row_number"),
+        ).subquery()
 
-        sub_id_comment_pairs = (
-            db.session.query(Submission.id, SubmissionComment.comment)
-            .join(latest_comments, Submission.id == latest_comments.c.submission_id)
-            .join(
-                SubmissionComment,
-                sa.and_(
-                    SubmissionComment.submission_id == latest_comments.c.submission_id,
-                    SubmissionComment.submit_date == latest_comments.c.max_date,
-                ),
-            )
-            .where(Submission.id.in_(submission_ids))
-            .order_by(SubmissionComment.submit_date.desc())
-        ).all()
-        comment_map = {p[0]: p[1] for p in sub_id_comment_pairs}
+        query2 = query.outerjoin(
+            latest_comments_subquery,
+            sa.and_(
+                Submission.id == latest_comments_subquery.c.submission_id, latest_comments_subquery.c.row_number == 1
+            ),
+        ).with_entities(Submission, latest_comments_subquery.c.comment)
 
-        for item in query:
+        for item, most_recent_comment in query2:
             if export_qa:
                 row_dict = item._asdict()
                 submission = row_dict["Submission"]
@@ -194,7 +183,7 @@ class SubmissionService(Service):
                         [submission.updated.strftime("%Y-%m-%d %H:%M:%S") if submission.updated else ""]
                         + [1 if sample in submission.participant.samples else 0 for sample in samples]
                         + [
-                            comment_map.get(submission.id, "").replace("\n", " ").strip(),
+                            (most_recent_comment or "").replace("\n", " ").strip(),
                             submission.quarantine_status.value if submission.quarantine_status else "",
                         ]
                     )
