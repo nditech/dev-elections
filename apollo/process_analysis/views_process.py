@@ -185,7 +185,9 @@ def _process_analysis(event, form_id, location_id=None, tag=None):
     if form.form_type == "INCIDENT":
         if display_tag:
             context["form_field"] = form.get_field_by_tag(display_tag)
-            context["location_types"] = location_types.find(is_political=True)
+            context["location_types"] = location_types.find(
+                is_political=True, location_set_id=event.location_set_id
+            )
             context["incidents"] = filter_set.qs
         else:
             incidents_summary = generate_incidents_data(submission_dataframe, form, location, grouped, tags)
