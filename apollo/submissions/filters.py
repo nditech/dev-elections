@@ -87,7 +87,7 @@ def make_submission_sample_filter(
                 )
                 .join(models.Participant.samples)
                 .with_entities(models.Participant.id.label("part_id"))
-                .subquery
+                .subquery()
             )
             query2 = query.join(
                 participants_subquery, models.Submission.participant_id == participants_subquery.c.part_id
