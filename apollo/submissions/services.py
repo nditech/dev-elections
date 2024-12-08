@@ -118,7 +118,21 @@ class SubmissionService(Service):
         yield output.getvalue()
         output.close()
 
-        for item in query:
+        latest_comments_subquery = sa.select(
+            SubmissionComment,
+            sa.func.row_number()
+            .over(partition_by=SubmissionComment.submission_id, order_by=SubmissionComment.submit_date.desc())
+            .label("row_number"),
+        ).subquery()
+
+        query2 = query.outerjoin(
+            latest_comments_subquery,
+            sa.and_(
+                Submission.id == latest_comments_subquery.c.submission_id, latest_comments_subquery.c.row_number == 1
+            ),
+        ).with_entities(Submission, latest_comments_subquery.c.comment)
+
+        for item, most_recent_comment in query2:
             if export_qa:
                 row_dict = item._asdict()
                 submission = row_dict["Submission"]
@@ -169,9 +183,7 @@ class SubmissionService(Service):
                         [submission.updated.strftime("%Y-%m-%d %H:%M:%S") if submission.updated else ""]
                         + [1 if sample in submission.participant.samples else 0 for sample in samples]
                         + [
-                            submission.comments[0].comment.replace("\n", "")  # noqa
-                            if submission.comments
-                            else "",
+                            (most_recent_comment or "").replace("\n", " ").strip(),
                             submission.quarantine_status.value if submission.quarantine_status else "",
                         ]
                     )
