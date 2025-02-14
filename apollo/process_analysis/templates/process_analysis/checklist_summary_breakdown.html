@@ -10,8 +10,9 @@
       <label for="{{ filter_form.location_group.id }}" class="sr-only">{{ filter_form.location_group.label.text }}</label>
       {{ filter_form.location_group(class_='form-control custom-select') }}
     </div>
-    <button type="submit" class="btn btn-primary">{{ _('Filter') }}</button>
+    <button type="submit" class="btn btn-primary mr-sm-2">{{ _('Filter') }}</button>
   </form>
+  <a class="btn btn-outline-secondary" id="export-btn">{{ _('Export process summary') }}</a>
 </div>
 {%- endblock %}
 
@@ -27,7 +28,7 @@
 			<div class="tab-pane active" id="table">
 				{% for tag, question, tag_stats in process_summary.top %}
 				{% with field = form.get_field_by_tag(tag) %}
-				<table id="mytable" class="table table-striped table-bordered {{- ' rtl' if g.locale.text_direction == 'rtl' else '' }}">
+				<table id="mytable" class="table table-striped table-bordered {{- ' rtl' if g.locale.text_direction == 'rtl' else '' }}" data-summary-table data-form-name="{{ form.name }}" data-form-tag="{{ tag }}">
 					{% with %}
 					{% if field.get('null_value') is none %}{% set buffer = 0 %}{% else %}{% set buffer = 4 %}{% endif %}
 					<tr>
@@ -140,3 +141,21 @@
 	</div>
 </div>
 {% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/xlsx.mini.min.js') }}"></script>
+<script>
+const loader = () => {
+	document.querySelector('#export-btn').addEventListener('click', () => {
+		const table = document.querySelector('table[data-summary-table]');
+		if (!table) {
+			return;
+		}
+		const workbook = XLSX.utils.table_to_book(table);
+		const formName = table.dataset.formName;
+		const filename = `${formName}-process-data-summary-${Math.floor((new Date()).getTime() / 1000)}.xlsx`;
+		XLSX.writeFile(workbook, filename);
+	});
+};
+document.addEventListener('DOMContentLoaded', loader);
+</script>
+{% endblock scripts %}

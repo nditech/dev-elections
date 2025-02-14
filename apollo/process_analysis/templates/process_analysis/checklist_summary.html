@@ -11,8 +11,9 @@
       <label for="{{ filter_form.location_group.id }}" class="sr-only">{{ filter_form.location_group.label.text }}</label>
       {{ filter_form.location_group(class_='form-control custom-select') }}
     </div>
-    <button type="submit" class="btn btn-primary">{{ _('Filter') }}</button>
+    <button type="submit" class="btn btn-primary mr-sm-2">{{ _('Filter') }}</button>
   </form>
+  <a class="btn btn-outline-secondary" id="export-btn">{{ _('Export process summary') }}</a>
 </div>
 {%- endblock %}
 
@@ -32,7 +33,7 @@
 					{% set question_summary = form|checklist_question_summary(field, location, dataframe) %}
 					{% set stats = question_summary.stats %}
 					<div class="table-responsive">
-						<table id="{{ field['tag'] }}" class="table table-striped table-bordered process" style="width:100%">
+						<table id="{{ field['tag'] }}" class="table table-striped table-bordered process" style="width:100%" data-summary-table="true" data-form-name="{{ form.name }}">
 						<thead>
 						<tr class="{{ 'rtl' if g.locale.text_direction == 'rtl' else '' }}">
 							<th>&nbsp;</th>
@@ -103,3 +104,75 @@
 	</div>
 </div>
 {% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/xlsx.mini.min.js') }}"></script>
+<script type="text/javascript">
+const loader = () => {
+	const createGapRows = (worksheet, nrows) => {
+		let ref = XLSX.utils.decode_range(worksheet['!ref']);
+		ref.e.r += nrows;
+		worksheet['!ref'] = XLSX.utils.encode_range(ref);
+	};
+
+	// this needs to be kept in sync with the HTML structure
+	// for the summary tables
+	const extractTableData = (table) => {
+		let tableData = [];
+
+		const row1 = [], row2 = [];
+		const splitCols = {};
+		Array.from(table.rows[1].cells).forEach((cell, index) => {
+			if (index === 0 || index === 1) {
+				row2.push(cell.textContent.trim());
+				splitCols[index] = false;
+			} else {
+				let colData;
+				if (cell.firstChild.tagName === 'STRONG') {
+					colData = cell.textContent;
+					splitCols[index] = false;
+					row2.push(Number.parseInt(`${colData.trim()}` || 0));
+				} else {
+					colData = cell.firstChild.children[0].textContent;
+					row2.push(colData.trim());
+					colData = cell.firstChild.children[1].textContent;
+					row2.push(Number.parseInt(`${colData.trim()}` || 0));
+					splitCols[index] = true;
+				}
+			}
+		});
+		Array.from(table.rows[0].cells).forEach((cell, index) => {
+			row1.push(cell.textContent.trim());
+			if (splitCols[index])
+				row1.push("");
+		});
+		tableData.push(row1);
+		tableData.push(row2);
+
+		return tableData;
+	};
+
+	document.querySelector('#export-btn').addEventListener('click', () => {
+		const tables = Array.from(document.querySelectorAll('table[data-summary-table]'));
+		if (tables.length === 0) {
+			return;
+		}
+		const workbook = XLSX.utils.book_new();
+		let worksheet;
+		tables.forEach((table, index) => {
+			const tableData = extractTableData(table);
+			if (index === 0) {
+				worksheet = XLSX.utils.aoa_to_sheet(tableData);
+			} else {
+				XLSX.utils.sheet_add_aoa(worksheet, tableData, {origin: -1});
+			}
+			createGapRows(worksheet, 2);
+		});
+		const formName = tables[0].dataset.formName;
+		const filename = `${formName}-process-data-summary-${Math.floor((new Date()).getTime() / 1000)}.xlsx`;
+		XLSX.utils.book_append_sheet(workbook, worksheet, formName);
+		XLSX.writeFile(workbook, filename);
+	});
+};
+document.addEventListener('DOMContentLoaded', loader);
+</script>
+{% endblock scripts %}

@@ -14,7 +14,8 @@
       <label for="{{ filter_form.status.id }}" class="sr-only">{{ filter_form.status.label.text }}</label>
       {{ filter_form.status(class_='form-control custom-select') }}
     </div>
-    <button type="submit" class="btn btn-primary">{{ _('Filter') }}</button>
+    <button type="submit" class="btn btn-primary mr-sm-2">{{ _('Filter') }}</button>
+    <a class="btn btn-outline-secondary" id="export-btn">{{ _('Export process summary') }}</a>
   </div>
 </form>
 {%- endblock %}
@@ -31,7 +32,7 @@
   {% if incidents_summary.top %}
 		<h4 class="font-weight-light mt-4{{ ' rtl' if g.locale.text_direction == 'rtl' else '' }}">{{ _('Summary') }}</h4>
     <div class="table-responsive">
-      <table class="table table-bordered table-striped">
+      <table class="table table-bordered table-striped" data-summary-table data-form-name="{{ form.name }}">
         <tr class="{{ 'rtl' if g.locale.text_direction == 'rtl' else '' }}">
           <th width="250">{{ _('Location') }}</th>
           <th width="100" style="text-align:center">N</th>
@@ -79,7 +80,7 @@
           {% set question_summary = form|checklist_question_summary(field, location, dataframe) %}
           {% set stats = question_summary.stats %}
           <div class="table-responsive">
-            <table width="100%" class="table table-striped table-bordered">
+            <table width="100%" class="table table-striped table-bordered" data-summary-table data-form-name="{{ form.name }}">
               <tr class="{{ 'rtl' if g.locale.text_direction == 'rtl' else '' }}">
                 <td width="30" rowspan="{% if stats.urban %}4{% else %}2{% endif %}"><strong>{{ field.tag }}</strong></td>
                 <td rowspan="{% if stats.urban %}4{% else %}2{% endif %}"><a class="text-decoration-none" href="{{ url_for('process_analysis.process_analysis_with_location_and_tag', form_id=form.id, location_id=location.id, tag=field.tag) }}">{{ field.description }}</a></td>
@@ -138,3 +139,68 @@
 	</div>
 </div>
 {% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/xlsx.mini.min.js') }}"></script>
+<script>
+const loader = () => {
+	document.querySelector('#export-btn').addEventListener('click', () => {
+    const createGapRows = (worksheet, nrows) => {
+      let ref = XLSX.utils.decode_range(worksheet['!ref']);
+      ref.e.r += nrows;
+      worksheet['!ref'] = XLSX.utils.encode_range(ref);
+    };
+
+    const tryParseNumericValue = value => {
+      const result = Number.parseInt(value);
+      return isNaN(result) ? value : result;
+    };
+
+    const extractTableData = table => {
+      let tableData = [], splitCols = {};
+      Array.from(table.rows).forEach(row => {
+        let rowData = [];
+        Array.from(row.cells).forEach(cell => {
+          if (cell.childNodes.length > 1) {
+            if (cell.querySelector('br')) {
+              const value = cell.childNodes[2].textContent.replace('(', '').replace(')', '').trim();
+              rowData.push(Number.parseInt(value));
+            } else {
+              rowData.push(cell.textContent.trim());
+            }
+          } else {
+            rowData.push(tryParseNumericValue(cell.textContent.trim()));
+          }
+        });
+        tableData.push(rowData);
+      });
+
+      return tableData;
+    };
+
+		const tables = Array.from(document.querySelectorAll('table[data-summary-table]'));
+    if (tables.length === 0) {
+      return;
+    }
+
+    ///*
+    const workbook = XLSX.utils.book_new();
+		let worksheet;
+    tables.forEach((table, index) => {
+      if (index === 0) {
+        worksheet = XLSX.utils.aoa_to_sheet(extractTableData(table))
+      } else {
+        XLSX.utils.sheet_add_dom(worksheet, table, {origin: -1})
+      }
+      createGapRows(worksheet, 2);
+    });
+		const formName = tables[0].dataset.formName;
+		const filename = `${formName}-process-data-summary-${Math.floor((new Date()).getTime() / 1000)}.xlsx`;
+    XLSX.utils.book_append_sheet(workbook, worksheet, formName);
+		XLSX.writeFile(workbook, filename);
+    //*/
+    //console.log(extractTableData(tables[0]));
+	});
+};
+document.addEventListener('DOMContentLoaded', loader);
+</script>
+{% endblock scripts %}
